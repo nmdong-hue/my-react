@@ -36,7 +36,7 @@ const resizeImage = (file: File, maxWidth: number): Promise<string> => {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.8)); // Use JPEG for better compression
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
         } else {
           reject('Failed to get canvas context');
         }
@@ -82,6 +82,15 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null);
+  const [theme, setTheme] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme || 'light';
+  });
+
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('diagnosisHistory');
@@ -99,6 +108,9 @@ function App() {
     }
   }, []);
 
+  const toggleTheme = () => {
+    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
 
   if (!apiKey || !openai) {
     return <ApiKeyMissing />;
@@ -107,17 +119,25 @@ function App() {
   const processFile = async (file: File) => {
     if (file && file.type.startsWith('image/')) {
         try {
-            const resizedImage = await resizeImage(file, 400); // Resize to 400px width
+            const resizedImage = await resizeImage(file, 400);
             setImage(resizedImage);
+            setDiagnosis(''); // Clear previous diagnosis
         } catch (error) {
             console.error("Image resizing failed:", error);
-            // Fallback to original image if resizing fails
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImage(reader.result as string);
             };
             reader.readAsDataURL(file);
         }
+    }
+  };
+
+  const handleClearImage = () => {
+    setImage(null);
+    setDiagnosis('');
+    if(fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -209,6 +229,11 @@ function App() {
   return (
     <>
       <header className="hero-section">
+         <div className="theme-toggle-container">
+          <button onClick={toggleTheme} className="theme-toggle-button">
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
+        </div>
         <div className="container">
           <h1>AI 농업 전문가</h1>
           <p>작물 사진을 업로드하여 간편하게 병해충을 진단하고 해결책을 찾아보세요.</p>
@@ -242,16 +267,23 @@ function App() {
               ref={fileInputRef}
               style={{ display: 'none' }}
             />
-            <button onClick={handleDiagnose} disabled={!image || loading} className="action-button">
-              {loading ? (
-                <>
-                  <div className="spinner"></div>
-                  <span>진단 중...</span>
-                </>
-              ) : (
-                '진단하기'
-              )}
-            </button>
+            <div className="upload-actions">
+                <button onClick={handleDiagnose} disabled={!image || loading} className="action-button">
+                {loading ? (
+                    <>
+                    <div className="spinner"></div>
+                    <span>진단 중...</span>
+                    </>
+                ) : (
+                    '진단하기'
+                )}
+                </button>
+                {image && !loading && (
+                    <button onClick={handleClearImage} className="clear-button">
+                        이미지 지우기
+                    </button>
+                )}
+            </div>
           </div>
 
           <div className="content-card results-section">
@@ -284,12 +316,14 @@ function App() {
                     <div className="history-image-placeholder"></div>
                   )}
                   <div className="history-info">
-                    <p>{item.diagnosis.substring(0, 100)}...</p>
-                    <span>{item.date}</span>
+                    <div className="history-text">
+                        <p>{item.diagnosis.substring(0, 80)}...</p>
+                        <span>{item.date}</span>
+                    </div>
+                    <button className="history-delete-button" onClick={(e) => handleDeleteHistoryItem(e, item.id)}>
+                        &times;
+                    </button>
                   </div>
-                  <button className="history-delete-button" onClick={(e) => handleDeleteHistoryItem(e, item.id)}>
-                    &times;
-                  </button>
                 </li>
               ))}
             </ul>
