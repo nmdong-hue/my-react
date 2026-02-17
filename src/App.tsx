@@ -68,8 +68,7 @@ function App() {
       // 진단 기록에 추가 및 로컬 스토리지에 저장
       const newHistoryItem = { 
         image, 
-        diagnosis: newDiagnosis.split('
-')[0], // 요약만 저장
+        diagnosis: newDiagnosis.split('\n')[0], // 요약만 저장
         date: new Date().toLocaleString()
       };
       const updatedHistory = [newHistoryItem, ...history];
