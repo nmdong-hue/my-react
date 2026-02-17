@@ -328,7 +328,7 @@ function App() {
                         <span>{item.date}</span>
                     </div>
                     <button className="history-delete-button" onClick={(e) => handleDeleteHistoryItem(e, item.id)}>
-                        삭제
+                        &times;
                     </button>
                   </div>
                 </li>
@@ -341,7 +341,7 @@ function App() {
       {selectedHistoryItem && (
         <div className="modal-backdrop" onClick={() => setSelectedHistoryItem(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-button" onClick={() => setSelectedHistoryItem(null)}>닫기</button>
+            <button className="modal-close-button" onClick={() => setSelectedHistoryItem(null)}>&times;</button>
             {selectedHistoryItem.image ? (
                 <img src={selectedHistoryItem.image} alt="진단 이미지" className="modal-image" />
             ) : (
@@ -358,7 +358,7 @@ function App() {
 
       <footer>
         <div className="container">
-          <p>&copy; {new Date().getFullYear()} AI 농업 전문가. All Rights Reserved.</p>
+          <p>&copy; {new Date().getFullYear()} AI 농업 전문가. 모든 권리 보유.</p>
         </div>
       </footer>
     </>

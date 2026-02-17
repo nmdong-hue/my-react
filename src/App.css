@@ -134,6 +134,7 @@ body {
   box-shadow: 0 4px 12px var(--shadow-color);
   padding: 32px;
   transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
+  position: relative;
 }
 
 .content-card:hover {
@@ -207,6 +208,10 @@ body {
 }
 
 .image-placeholder .placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   text-align: center;
   color: var(--light-text-color);
 }
@@ -397,21 +402,23 @@ body {
 .history-delete-button {
   background: transparent;
   color: var(--light-text-color);
-  border: none;
+  border: 1px solid var(--border-color);
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  font-size: 24px;
-  line-height: 36px;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  line-height: 32px;
   text-align: center;
   cursor: pointer;
-  transition: color 0.3s, transform 0.3s;
+  transition: all 0.3s;
   flex-shrink: 0;
   margin-left: 12px;
 }
 
 .history-delete-button:hover {
-  color: var(--danger-color);
+  background-color: var(--danger-color);
+  color: white;
+  border-color: var(--danger-color);
   transform: scale(1.1);
 }
 
@@ -464,18 +471,25 @@ body {
 
 .modal-close-button {
   position: absolute;
-  top: 15px;
-  right: 20px;
+  top: 12px;
+  right: 12px;
   background: none;
   border: none;
-  font-size: 2.5rem;
+  font-size: 28px;
   color: var(--light-text-color);
   cursor: pointer;
-  transition: color 0.3s;
+  transition: color 0.3s, transform 0.3s;
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  border-radius: 50%;
 }
 
 .modal-close-button:hover {
   color: var(--text-color);
+  transform: scale(1.1);
+  background-color: var(--border-color);
 }
 
 .modal-image {
@@ -486,12 +500,14 @@ body {
 }
 
 .modal-diagnosis {
-  padding: 24px;
+  padding: 32px;
+  padding-top: 24px;
   overflow-y: auto;
 }
 
 .modal-diagnosis h2 {
   margin-top: 0;
+  margin-bottom: 16px;
   font-size: 1.5rem;
 }
 
@@ -502,13 +518,17 @@ body {
   font-size: 1rem;
   line-height: 1.7;
   color: var(--pre-text);
+  background: var(--background-color);
+  padding: 16px;
+  border-radius: 8px;
 }
 
 .modal-diagnosis span {
   display: block;
-  margin-top: 16px;
+  margin-top: 24px;
   font-size: 0.9rem;
   color: var(--light-text-color);
+  text-align: right;
 }
 
 @keyframes fadeIn {
