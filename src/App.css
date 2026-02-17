@@ -182,6 +182,16 @@ body {
 /* -- Results Section -- */
 /* -------------------- */
 
+.results-section .result-image {
+    width: 100%;
+    border-radius: 10px;
+    margin-bottom: 24px;
+    object-fit: cover;
+    max-height: 300px; /* Limit the height for a balanced look */
+    border: 1px solid var(--border-color);
+}
+
+
 .diagnosis-output {
   white-space: pre-wrap;
   word-wrap: break-word;
