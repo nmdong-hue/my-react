@@ -2,10 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import OpenAI from 'openai';
 import './App.css';
 
-// Vite 환경 변수에서 API 키를 가져옵니다.
 const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-// API 키가 있을 경우에만 OpenAI 클라이언트를 초기화합니다.
 let openai: OpenAI | null = null;
 if (apiKey) {
   openai = new OpenAI({
@@ -14,36 +12,19 @@ if (apiKey) {
   });
 }
 
-/**
- * API 키가 없을 때 사용자에게 안내를 보여주는 컴포넌트입니다.
- */
 function ApiKeyMissing() {
   return (
-    <>
-      <header>
-        <div className="container">
-          <h1>AI 농업 병해충 진단</h1>
-        </div>
-      </header>
-      <main className="container">
-        <div className="results-section" style={{ textAlign: 'center' }}>
-            <h2>OpenAI API 키가 설정되지 않았습니다.</h2>
-            <p>이 애플리케이션을 사용하려면 Cloudflare Pages 대시보드에서 환경 변수를 설정해야 합니다.</p>
-            <p>프로젝트 설정으로 이동하여 다음 환경 변수를 추가해주세요:</p>
-            <p><strong>변수 이름:</strong> <code>VITE_OPENAI_API_KEY</code></p>
-            <p><strong>변수 값:</strong> 당신의 OpenAI API 키 (<code>sk-...</code>로 시작)</p>
-            <p>환경 변수를 설정한 후에는 새로운 배포가 필요할 수 있습니다.</p>
-        </div>
-      </main>
-       <footer>
-        <div className="container">
-          <p>&copy; {new Date().getFullYear()} AI 농업 병해충 진단. All Rights Reserved.</p>
-        </div>
-      </footer>
-    </>
+    <div className="container">
+      <div className="api-key-missing content-card">
+        <h2>OpenAI API 키가 필요합니다</h2>
+        <p>이 애플리케이션을 사용하려면 먼저 환경 변수를 설정해야 합니다.</p>
+        <p>프로젝트 설정에서 다음 환경 변수를 추가하세요:</p>
+        <p><strong>이름:</strong> <code>VITE_OPENAI_API_KEY</code></p>
+        <p><strong>값:</strong> <code>sk-...</code>로 시작하는 OpenAI API 키</p>
+      </div>
+    </div>
   );
 }
-
 
 function App() {
   const [image, setImage] = useState<string | null>(null);
@@ -51,9 +32,7 @@ function App() {
   const [loading, setLoading] = useState<boolean>(false);
   const [history, setHistory] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [crop, setCrop] = useState<string>('고추'); // 기본 작물 설정
 
-  // 페이지 로드 시 로컬 스토리지에서 기록 불러오기
   useEffect(() => {
     const savedHistory = localStorage.getItem('diagnosisHistory');
     if (savedHistory) {
@@ -61,7 +40,6 @@ function App() {
     }
   }, []);
 
-  // API 키가 없으면 안내 컴포넌트를 렌더링합니다.
   if (!apiKey || !openai) {
     return <ApiKeyMissing />;
   }
@@ -90,13 +68,8 @@ function App() {
           {
             role: "user",
             content: [
-              { type: "text", text: `이 ${crop} 작물 사진을 보고, 어떤 질병이나 해충 문제가 있는지 진단해줘. 만약 병해충이 확인되면, 어떤 유기농 및 화학적 방제법이 있는지 자세히 알려주고, 예상되는 원인도 함께 설명해줘. 만약 특별한 문제가 없다면, 작물의 상태가 양호하다고 알려줘.` },
-              {
-                type: "image_url",
-                image_url: {
-                  "url": image,
-                },
-              },
+              { type: "text", text: `이 작물 사진을 보고, 어떤 질병이나 해충 문제가 있는지 진단해줘. 만약 병해충이 확인되면, 어떤 유기농 및 화학적 방제법이 있는지 자세히 알려주고, 예상되는 원인도 함께 설명해줘. 만약 특별한 문제가 없다면, 작물의 상태가 양호하다고 알려줘.` },
+              { type: "image_url", image_url: { "url": image } },
             ],
           },
         ],
@@ -105,10 +78,9 @@ function App() {
       const newDiagnosis = response.choices[0].message.content || '진단 결과를 받아올 수 없습니다.';
       setDiagnosis(newDiagnosis);
 
-      // 진단 기록에 추가 및 로컬 스토리지에 저장
       const newHistoryItem = { 
         image, 
-        diagnosis: newDiagnosis.split('\n')[0], // 요약만 저장
+        diagnosis: newDiagnosis.split('\n')[0],
         date: new Date().toLocaleString()
       };
       const updatedHistory = [newHistoryItem, ...history];
@@ -124,68 +96,65 @@ function App() {
 
   return (
     <>
-      <header>
+      <header className="hero-section">
         <div className="container">
-          <h1>AI 농업 병해충 진단</h1>
+          <h1>AI 농업 전문가</h1>
+          <p>작물 사진을 업로드하여 간편하게 병해충을 진단하고 해결책을 찾아보세요.</p>
         </div>
       </header>
 
-      <main className="container">
-        {/* 작물 선택 UI */}
-        <div className="crop-selection-section">
-          <label htmlFor="crop-select">진단할 작물을 선택하세요:</label>
-          <select id="crop-select" value={crop} onChange={(e) => setCrop(e.target.value)}>
-            <option value="고추">고추</option>
-            <option value="토마토">토마토</option>
-            <option value="오이">오이</option>
-            <option value="딸기">딸기</option>
-            <option value="포도">포도</option>
-            <option value="사과">사과</option>
-            {/* 필요에 따라 작물 추가 */}
-          </select>
-        </div>
+      <div className="container">
+        <div className="main-content">
+          <div className="content-card upload-section">
+            <h2>1. 사진 업로드</h2>
+            <div 
+              className="image-placeholder"
+              onClick={() => fileInputRef.current?.click()}
+              style={{ backgroundImage: image ? `url(${image})` : 'none' }}
+            >
+              {!image && (
+                <div className="placeholder-content">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                  <span>클릭하여 작물 사진 업로드</span>
+                </div>
+              )}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+            />
+            <button onClick={handleDiagnose} disabled={!image || loading} className="action-button">
+              {loading ? (
+                <>
+                  <div className="spinner"></div>
+                  <span>진단 중...</span>
+                </>
+              ) : (
+                '진단하기'
+              )}
+            </button>
+          </div>
 
-        <div className="upload-section">
-          <div 
-            className={`image-placeholder ${image ? 'has-image' : ''}`}
-            onClick={() => fileInputRef.current?.click()}
-            style={{ backgroundImage: image ? `url(${image})` : 'none' }}
-          >
-            {!image && (
-              <div className="placeholder-content">
-                <span>클릭하여 작물 사진 업로드</span>
+          <div className="content-card results-section">
+            <h2>2. 진단 결과</h2>
+            {(loading || diagnosis) ? (
+              <>
+                {loading && !diagnosis && <div className="spinner-large"></div>}
+                <pre className="diagnosis-output">{diagnosis}</pre>
+              </>
+            ) : (
+              <div className="placeholder-content" style={{height: '100%', justifyContent: 'center'}}>
+                <p>사진을 업로드하고 진단 버튼을 누르면 여기에 결과가 표시됩니다.</p>
               </div>
             )}
           </div>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            ref={fileInputRef}
-            style={{ display: 'none' }}
-          />
-          <button onClick={handleDiagnose} disabled={!image || loading}>
-            {loading ? (
-              <>
-                <div className="spinner"></div>
-                <span>진단 중...</span>
-              </> 
-            ) : (
-              '진단하기'
-            )}
-          </button>
         </div>
-        
-        {(loading || diagnosis) && (
-          <div className="results-section">
-            <h2>진단 결과</h2>
-            {loading && !diagnosis && <div className="spinner-large"></div>} 
-            <pre className="diagnosis-output">{diagnosis}</pre>
-          </div>
-        )}
 
         {history.length > 0 && (
-          <div className="history-section">
+          <div className="content-card history-section">
             <h2>최근 진단 기록</h2>
             <ul>
               {history.map((item, index) => (
@@ -200,12 +169,11 @@ function App() {
             </ul>
           </div>
         )}
-
-      </main>
+      </div>
 
       <footer>
         <div className="container">
-          <p>&copy; {new Date().getFullYear()} AI 농업 병해충 진단. All Rights Reserved.</p>
+          <p>&copy; {new Date().getFullYear()} AI 농업 전문가. All Rights Reserved.</p>
         </div>
       </footer>
     </>
