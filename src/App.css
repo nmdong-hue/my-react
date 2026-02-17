@@ -5,8 +5,6 @@
 :root {
   --primary-color: #2ecc71;
   --primary-glow: rgba(46, 204, 113, 0.4);
-  --gradient-start: #a8e063;
-  --gradient-end: #56ab2f;
   --danger-color: #e74c3c;
   --danger-glow: rgba(231, 76, 60, 0.4);
   --secondary-action-color: #3498db;
@@ -26,6 +24,8 @@ body[data-theme='light'] {
   --pre-bg: #fafafa;
   --pre-text: #2c3e50;
   --modal-bg: rgba(0, 0, 0, 0.6);
+  --hero-gradient-start: #a8e063;
+  --hero-gradient-end: #56ab2f;
 }
 
 /* Dark Theme */
@@ -41,6 +41,8 @@ body[data-theme='dark'] {
   --pre-bg: #222;
   --pre-text: #bdc3c7;
   --modal-bg: rgba(0, 0, 0, 0.8);
+  --hero-gradient-start: #2c5364;
+  --hero-gradient-end: #203a43;
 }
 
 body {
@@ -65,9 +67,10 @@ body {
 .hero-section {
   padding: 80px 0;
   text-align: center;
-  background: linear-gradient(45deg, var(--gradient-start), var(--gradient-end));
+  background: linear-gradient(45deg, var(--hero-gradient-start), var(--hero-gradient-end));
   color: white;
   position: relative;
+  transition: background 0.5s ease;
 }
 
 .theme-toggle-container {
@@ -79,20 +82,19 @@ body {
 .theme-toggle-button {
     background: rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
-    font-size: 20px;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: white;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    backdrop-filter: blur(5px);
     transition: background-color 0.3s, transform 0.3s;
 }
 
 .theme-toggle-button:hover {
     background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .hero-section h1 {
@@ -400,15 +402,17 @@ body {
   width: 36px;
   height: 36px;
   font-size: 24px;
+  line-height: 36px;
+  text-align: center;
   cursor: pointer;
-  transition: background-color 0.3s, color 0.3s;
+  transition: color 0.3s, transform 0.3s;
   flex-shrink: 0;
   margin-left: 12px;
 }
 
 .history-delete-button:hover {
-  background-color: var(--danger-color);
-  color: white;
+  color: var(--danger-color);
+  transform: scale(1.1);
 }
 
 .history-image-placeholder {

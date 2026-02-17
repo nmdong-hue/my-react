@@ -55,7 +55,7 @@ const saveHistoryToLocalStorage = (history: HistoryItem[]) => {
   } catch (error) {
     console.error("Could not save history to localStorage:", error);
     if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-        alert("저장 공간가 부족하여 진단 기록을 저장할 수 없습니다. 오래된 기록을 삭제하면 문제가 해결될 수 있습니다.");
+        alert("저장 공간이 부족하여 진단 기록을 저장할 수 없습니다. 오래된 기록을 삭제하면 문제가 해결될 수 있습니다.");
     }
   }
 };
@@ -231,7 +231,7 @@ function App() {
       <header className="hero-section">
          <div className="theme-toggle-container">
           <button onClick={toggleTheme} className="theme-toggle-button">
-            {theme === 'light' ? '🌙' : '☀️'}
+            {theme === 'light' ? '다크 모드' : '라이트 모드'}
           </button>
         </div>
         <div className="container">
