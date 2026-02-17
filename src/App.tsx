@@ -12,6 +12,14 @@ if (apiKey) {
   });
 }
 
+// A unique ID for each history item for safe deletion
+type HistoryItem = {
+  id: number;
+  image: string;
+  diagnosis: string;
+  date: string;
+};
+
 function ApiKeyMissing() {
   return (
     <div className="container">
@@ -30,15 +38,20 @@ function App() {
   const [image, setImage] = useState<string | null>(null);
   const [diagnosis, setDiagnosis] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [selectedHistoryItem, setSelectedHistoryItem] = useState<any | null>(null);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('diagnosisHistory');
     if (savedHistory) {
-      setHistory(JSON.parse(savedHistory));
+      // Add id to old items for backward compatibility
+      const parsedHistory = JSON.parse(savedHistory).map((item: any, index: number) => ({
+        ...item,
+        id: item.id || Date.now() + index, // Ensure unique ID
+      }));
+      setHistory(parsedHistory);
     }
   }, []);
 
@@ -109,9 +122,10 @@ function App() {
       const newDiagnosis = response.choices[0].message.content || '진단 결과를 받아올 수 없습니다.';
       setDiagnosis(newDiagnosis);
 
-      const newHistoryItem = { 
-        image, 
-        diagnosis: newDiagnosis, // Store the full diagnosis for the modal view
+      const newHistoryItem: HistoryItem = { 
+        id: Date.now(),
+        image,
+        diagnosis: newDiagnosis,
         date: new Date().toLocaleString()
       };
       const updatedHistory = [newHistoryItem, ...history];
@@ -122,6 +136,18 @@ function App() {
       setDiagnosis(`오류가 발생했습니다: ${error.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteHistoryItem = (e: React.MouseEvent, idToDelete: number) => {
+    e.stopPropagation(); // Prevent modal from opening
+    if (window.confirm("이 진단 기록을 정말 삭제하시겠습니까?")) {
+      const updatedHistory = history.filter(item => item.id !== idToDelete);
+      setHistory(updatedHistory);
+      localStorage.setItem('diagnosisHistory', JSON.stringify(updatedHistory));
+      if (selectedHistoryItem?.id === idToDelete) {
+        setSelectedHistoryItem(null); // Close modal if the deleted item was selected
+      }
     }
   };
 
@@ -192,13 +218,16 @@ function App() {
           <div className="content-card history-section">
             <h2>최근 진단 기록</h2>
             <ul>
-              {history.map((item, index) => (
-                <li key={index} onClick={() => setSelectedHistoryItem(item)}>
-                  <img src={item.image} alt="진단 이미지" />
+              {history.map((item) => (
+                <li key={item.id} onClick={() => setSelectedHistoryItem(item)}>
+                   <img src={item.image} alt="진단 이미지" />
                   <div className="history-info">
-                    <p>{item.diagnosis}</p>
+                    <p>{item.diagnosis.substring(0, 50)}...</p>
                     <span>{item.date}</span>
                   </div>
+                  <button className="history-delete-button" onClick={(e) => handleDeleteHistoryItem(e, item.id)}>
+                    &times;
+                  </button>
                 </li>
               ))}
             </ul>
