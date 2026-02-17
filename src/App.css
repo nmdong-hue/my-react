@@ -292,6 +292,21 @@ body {
   background: var(--danger-color);
 }
 
+.history-image-placeholder {
+    width: 100%;
+    height: 200px;
+    background-color: #f0f0f0; /* A light grey background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ccc; /* A lighter grey for the icon */
+}
+
+.history-image-placeholder::before {
+    content: '🖼️'; /* A simple image icon */
+    font-size: 48px;
+}
+
 
 /* ----------------------- */
 /* -- Modal for History -- */
@@ -346,6 +361,24 @@ body {
   object-fit: contain;
   background-color: #f0f0f0;
 }
+
+.modal-image-placeholder {
+    width: 100%;
+    min-height: 300px; /* Give it a minimum height */
+    background-color: #e9ecef; /* A slightly different grey */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #bdc3c7; /* A subtle text/icon color */
+    text-align: center;
+    font-size: 1rem;
+    padding: 20px;
+}
+
+.modal-image-placeholder::before {
+    content: '과거 진단 기록의 이미지는 저장되지 않습니다.';
+}
+
 
 .modal-diagnosis {
   padding: 24px;

@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import OpenAI from 'openai';
 import './App.css';
@@ -12,15 +13,35 @@ if (apiKey) {
   });
 }
 
-// A unique ID for each history item for safe deletion
 type HistoryItem = {
   id: number;
-  image: string;
+  image: string | null; // Allow image to be null
   diagnosis: string;
   date: string;
 };
 
 const MAX_HISTORY_ITEMS = 20; // Limit the number of items in history
+
+// Helper function to save history to localStorage without large image data
+const saveHistoryToLocalStorage = (history: HistoryItem[]) => {
+  try {
+    const historyForStorage = history.map(item => {
+      // Destructure to omit the 'image' property for storage
+      const { image, ...rest } = item;
+      return rest;
+    });
+    localStorage.setItem('diagnosisHistory', JSON.stringify(historyForStorage));
+  } catch (error) {
+    console.error("Could not save history to localStorage:", error);
+    // If saving fails (e.g., quota exceeded), we might want to alert the user
+    // or clear old history as a recovery mechanism.
+    if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
+        alert("저장 공간이 부족하여 진단 기록을 저장할 수 없습니다. 오래된 기록을 삭제하면 문제가 해결될 수 있습니다.");
+        // As a last resort, clear storage to allow the app to function again.
+        // localStorage.removeItem('diagnosisHistory');
+    }
+  }
+};
 
 function ApiKeyMissing() {
   return (
@@ -46,14 +67,21 @@ function App() {
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null);
 
   useEffect(() => {
-    const savedHistory = localStorage.getItem('diagnosisHistory');
-    if (savedHistory) {
-      // Add id to old items for backward compatibility
-      const parsedHistory = JSON.parse(savedHistory).map((item: any, index: number) => ({
-        ...item,
-        id: item.id || Date.now() + index, // Ensure unique ID
-      }));
-      setHistory(parsedHistory.slice(0, MAX_HISTORY_ITEMS)); // Enforce limit on load
+    try {
+        const savedHistory = localStorage.getItem('diagnosisHistory');
+        if (savedHistory) {
+        // Data from localStorage will not have the 'image' property.
+        const parsedHistory = JSON.parse(savedHistory).map((item: any, index: number) => ({
+            ...item,
+            id: item.id || Date.now() + index, // Ensure unique ID
+            image: null, // Explicitly set image to null for items loaded from storage
+        }));
+        setHistory(parsedHistory.slice(0, MAX_HISTORY_ITEMS));
+        }
+    } catch (error) {
+        console.error("Failed to load or parse history from localStorage:", error);
+        // If parsing fails, the data might be corrupt. Clear it to recover.
+        localStorage.removeItem('diagnosisHistory');
     }
   }, []);
 
@@ -126,17 +154,21 @@ function App() {
 
       const newHistoryItem: HistoryItem = { 
         id: Date.now(),
-        image,
+        image, // Keep the image in component state for the current session
         diagnosis: newDiagnosis,
         date: new Date().toLocaleString()
       };
       
       const updatedHistory = [newHistoryItem, ...history].slice(0, MAX_HISTORY_ITEMS);
       setHistory(updatedHistory);
-      localStorage.setItem('diagnosisHistory', JSON.stringify(updatedHistory));
+      
+      // Save to localStorage without the large image data
+      saveHistoryToLocalStorage(updatedHistory);
 
     } catch (error: any) {
-      setDiagnosis(`오류가 발생했습니다: ${error.message}`);
+      // Use the error message from the caught error object
+      const errorMessage = error.message || '알 수 없는 오류가 발생했습니다.';
+      setDiagnosis(`오류가 발생했습니다: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -147,7 +179,8 @@ function App() {
     if (window.confirm("이 진단 기록을 정말 삭제하시겠습니까?")) {
       const updatedHistory = history.filter(item => item.id !== idToDelete);
       setHistory(updatedHistory);
-      localStorage.setItem('diagnosisHistory', JSON.stringify(updatedHistory));
+      // Save the updated list to localStorage (also without images)
+      saveHistoryToLocalStorage(updatedHistory);
       if (selectedHistoryItem?.id === idToDelete) {
         setSelectedHistoryItem(null); // Close modal if the deleted item was selected
       }
@@ -223,7 +256,12 @@ function App() {
             <ul>
               {history.map((item) => (
                 <li key={item.id} onClick={() => setSelectedHistoryItem(item)}>
-                   <img src={item.image} alt="진단 이미지" />
+                  {/* Conditionally render image */}
+                  {item.image ? (
+                    <img src={item.image} alt="진단 이미지" />
+                  ) : (
+                    <div className="history-image-placeholder"></div>
+                  )}
                   <div className="history-info">
                     <p>{item.diagnosis.substring(0, 100)}...</p>
                     <span>{item.date}</span>
@@ -242,7 +280,12 @@ function App() {
         <div className="modal-backdrop" onClick={() => setSelectedHistoryItem(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close-button" onClick={() => setSelectedHistoryItem(null)}>&times;</button>
-            <img src={selectedHistoryItem.image} alt="진단 이미지" className="modal-image" />
+            {/* Conditionally render image in modal */}
+            {selectedHistoryItem.image ? (
+                <img src={selectedHistoryItem.image} alt="진단 이미지" className="modal-image" />
+            ) : (
+                <div className="modal-image-placeholder"></div>
+            )}
             <div className="modal-diagnosis">
                 <h2>상세 진단 결과</h2>
                 <pre>{selectedHistoryItem.diagnosis}</pre>
