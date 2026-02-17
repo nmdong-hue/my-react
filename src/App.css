@@ -9,6 +9,8 @@
   --gradient-end: #56ab2f;
   --danger-color: #e74c3c;
   --danger-glow: rgba(231, 76, 60, 0.4);
+  --secondary-action-color: #3498db;
+  --secondary-action-glow: rgba(52, 152, 219, 0.4);
 }
 
 /* Light Theme (Default) */
@@ -137,13 +139,39 @@ body {
   box-shadow: 0 8px 20px var(--shadow-color);
 }
 
-.content-card h2 {
-  font-size: 1.75rem;
-  margin-top: 0;
-  padding-bottom: 16px;
-  border-bottom: 2px solid var(--border-color);
-  margin-bottom: 24px;
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 24px;
 }
+
+.content-card h2 {
+    font-size: 1.75rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.reset-button-header {
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--light-text-color);
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.reset-button-header:hover {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+
 
 /* -------------------- */
 /* --- Upload Section --- */
@@ -225,7 +253,7 @@ body {
 }
 
 .clear-button {
-    background-color: var(--danger-color);
+    background-color: var(--secondary-action-color);
     color: white;
     border: none;
     padding: 0 24px;
@@ -233,13 +261,13 @@ body {
     font-weight: 500;
     border-radius: 8px;
     cursor: pointer;
-    box-shadow: 0 4px 15px var(--danger-glow);
+    box-shadow: 0 4px 15px var(--secondary-action-glow);
     transition: all 0.3s;
 }
 
 .clear-button:hover {
     transform: translateY(-3px);
-    box-shadow: 0 6px 20px var(--danger-glow);
+    box-shadow: 0 6px 20px var(--secondary-action-glow);
 }
 
 

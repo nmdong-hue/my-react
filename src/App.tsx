@@ -55,7 +55,7 @@ const saveHistoryToLocalStorage = (history: HistoryItem[]) => {
   } catch (error) {
     console.error("Could not save history to localStorage:", error);
     if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-        alert("저장 공간이 부족하여 진단 기록을 저장할 수 없습니다. 오래된 기록을 삭제하면 문제가 해결될 수 있습니다.");
+        alert("저장 공간가 부족하여 진단 기록을 저장할 수 없습니다. 오래된 기록을 삭제하면 문제가 해결될 수 있습니다.");
     }
   }
 };
@@ -133,7 +133,7 @@ function App() {
     }
   };
 
-  const handleClearImage = () => {
+  const handleReset = () => {
     setImage(null);
     setDiagnosis('');
     if(fileInputRef.current) {
@@ -279,15 +279,22 @@ function App() {
                 )}
                 </button>
                 {image && !loading && (
-                    <button onClick={handleClearImage} className="clear-button">
-                        이미지 지우기
+                    <button onClick={handleReset} className="clear-button">
+                        초기화
                     </button>
                 )}
             </div>
           </div>
 
           <div className="content-card results-section">
-            <h2>2. 진단 결과</h2>
+            <div className="card-header">
+                <h2>2. 진단 결과</h2>
+                {(diagnosis || loading) && (
+                    <button onClick={handleReset} className="reset-button-header">
+                        초기화
+                    </button>
+                )}
+            </div>
             {(loading || diagnosis) ? (
                 <>
                     {loading && !diagnosis && <div className="spinner-large"></div>}
