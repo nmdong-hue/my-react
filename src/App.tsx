@@ -32,6 +32,8 @@ function App() {
   const [loading, setLoading] = useState<boolean>(false);
   const [history, setHistory] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<any | null>(null);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('diagnosisHistory');
@@ -44,15 +46,44 @@ function App() {
     return <ApiKeyMissing />;
   }
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
+  const processFile = (file: File) => {
+    if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) processFile(file);
   };
 
   const handleDiagnose = async () => {
@@ -80,7 +111,7 @@ function App() {
 
       const newHistoryItem = { 
         image, 
-        diagnosis: newDiagnosis.split('\n')[0],
+        diagnosis: newDiagnosis, // Store the full diagnosis for the modal view
         date: new Date().toLocaleString()
       };
       const updatedHistory = [newHistoryItem, ...history];
@@ -108,14 +139,18 @@ function App() {
           <div className="content-card upload-section">
             <h2>1. 사진 업로드</h2>
             <div 
-              className="image-placeholder"
+              className={`image-placeholder ${isDragging ? 'dragging' : ''}`}
               onClick={() => fileInputRef.current?.click()}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
               style={{ backgroundImage: image ? `url(${image})` : 'none' }}
             >
               {!image && (
                 <div className="placeholder-content">
                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                  <span>클릭하여 작물 사진 업로드</span>
+                  <span>클릭 또는 드래그하여 작물 사진 업로드</span>
                 </div>
               )}
             </div>
@@ -158,7 +193,7 @@ function App() {
             <h2>최근 진단 기록</h2>
             <ul>
               {history.map((item, index) => (
-                <li key={index}>
+                <li key={index} onClick={() => setSelectedHistoryItem(item)}>
                   <img src={item.image} alt="진단 이미지" />
                   <div className="history-info">
                     <p>{item.diagnosis}</p>
@@ -170,6 +205,20 @@ function App() {
           </div>
         )}
       </div>
+
+      {selectedHistoryItem && (
+        <div className="modal-backdrop" onClick={() => setSelectedHistoryItem(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-button" onClick={() => setSelectedHistoryItem(null)}>&times;</button>
+            <img src={selectedHistoryItem.image} alt="진단 이미지" className="modal-image" />
+            <div className="modal-diagnosis">
+                <h2>상세 진단 결과</h2>
+                <pre>{selectedHistoryItem.diagnosis}</pre>
+                <span>진단 일시: {selectedHistoryItem.date}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer>
         <div className="container">
