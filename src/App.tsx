@@ -5,10 +5,45 @@ import './App.css';
 // Vite 환경 변수에서 API 키를 가져옵니다.
 const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
 
-const openai = new OpenAI({
-  apiKey: apiKey,
-  dangerouslyAllowBrowser: true // 브라우저 환경에서 API 키 사용을 허용합니다.
-});
+// API 키가 있을 경우에만 OpenAI 클라이언트를 초기화합니다.
+let openai: OpenAI | null = null;
+if (apiKey) {
+  openai = new OpenAI({
+    apiKey: apiKey,
+    dangerouslyAllowBrowser: true,
+  });
+}
+
+/**
+ * API 키가 없을 때 사용자에게 안내를 보여주는 컴포넌트입니다.
+ */
+function ApiKeyMissing() {
+  return (
+    <>
+      <header>
+        <div className="container">
+          <h1>AI 농업 병해충 진단</h1>
+        </div>
+      </header>
+      <main className="container">
+        <div className="results-section" style={{ textAlign: 'center' }}>
+            <h2>OpenAI API 키가 설정되지 않았습니다.</h2>
+            <p>이 애플리케이션을 사용하려면 Cloudflare Pages 대시보드에서 환경 변수를 설정해야 합니다.</p>
+            <p>프로젝트 설정으로 이동하여 다음 환경 변수를 추가해주세요:</p>
+            <p><strong>변수 이름:</strong> <code>VITE_OPENAI_API_KEY</code></p>
+            <p><strong>변수 값:</strong> 당신의 OpenAI API 키 (<code>sk-...</code>로 시작)</p>
+            <p>환경 변수를 설정한 후에는 새로운 배포가 필요할 수 있습니다.</p>
+        </div>
+      </main>
+       <footer>
+        <div className="container">
+          <p>&copy; {new Date().getFullYear()} AI 농업 병해충 진단. All Rights Reserved.</p>
+        </div>
+      </footer>
+    </>
+  );
+}
+
 
 function App() {
   const [image, setImage] = useState<string | null>(null);
@@ -26,6 +61,11 @@ function App() {
     }
   }, []);
 
+  // API 키가 없으면 안내 컴포넌트를 렌더링합니다.
+  if (!apiKey || !openai) {
+    return <ApiKeyMissing />;
+  }
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -38,7 +78,7 @@ function App() {
   };
 
   const handleDiagnose = async () => {
-    if (!image) return;
+    if (!image || !openai) return;
 
     setLoading(true);
     setDiagnosis('');
@@ -81,18 +121,6 @@ function App() {
       setLoading(false);
     }
   };
-
-  if (!apiKey) {
-    return (
-      <div className="container">
-        <div className="api-key-missing">
-          <h1>OpenAI API 키가 필요합니다</h1>
-          <p>애플리케이션을 사용하려면 Cloudflare Pages 환경 변수에 <code>VITE_OPENAI_API_KEY</code>를 설정해야 합니다.</p>
-          <p>API 키를 설정한 후 페이지를 새로고침해주세요.</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>
