@@ -20,6 +20,8 @@ type HistoryItem = {
   date: string;
 };
 
+const MAX_HISTORY_ITEMS = 20; // Limit the number of items in history
+
 function ApiKeyMissing() {
   return (
     <div className="container">
@@ -51,7 +53,7 @@ function App() {
         ...item,
         id: item.id || Date.now() + index, // Ensure unique ID
       }));
-      setHistory(parsedHistory);
+      setHistory(parsedHistory.slice(0, MAX_HISTORY_ITEMS)); // Enforce limit on load
     }
   }, []);
 
@@ -128,7 +130,8 @@ function App() {
         diagnosis: newDiagnosis,
         date: new Date().toLocaleString()
       };
-      const updatedHistory = [newHistoryItem, ...history];
+      
+      const updatedHistory = [newHistoryItem, ...history].slice(0, MAX_HISTORY_ITEMS);
       setHistory(updatedHistory);
       localStorage.setItem('diagnosisHistory', JSON.stringify(updatedHistory));
 
@@ -222,7 +225,7 @@ function App() {
                 <li key={item.id} onClick={() => setSelectedHistoryItem(item)}>
                    <img src={item.image} alt="진단 이미지" />
                   <div className="history-info">
-                    <p>{item.diagnosis}</p>
+                    <p>{item.diagnosis.substring(0, 100)}...</p>
                     <span>{item.date}</span>
                   </div>
                   <button className="history-delete-button" onClick={(e) => handleDeleteHistoryItem(e, item.id)}>
