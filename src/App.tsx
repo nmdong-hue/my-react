@@ -222,7 +222,7 @@ function App() {
                 <li key={item.id} onClick={() => setSelectedHistoryItem(item)}>
                    <img src={item.image} alt="진단 이미지" />
                   <div className="history-info">
-                    <p>{item.diagnosis.substring(0, 50)}...</p>
+                    <p>{item.diagnosis}</p>
                     <span>{item.date}</span>
                   </div>
                   <button className="history-delete-button" onClick={(e) => handleDeleteHistoryItem(e, item.id)}>

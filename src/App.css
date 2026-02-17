@@ -232,6 +232,8 @@ body {
   transition: transform 0.3s, box-shadow 0.3s;
   cursor: pointer;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .history-section li:hover {
@@ -248,21 +250,24 @@ body {
 
 .history-info {
   padding: 16px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .history-info p {
   margin: 0 0 8px 0;
   font-weight: 500;
   color: var(--text-color);
-  /* Truncate long text */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: pre-wrap; /* Allow wrapping */
+  word-wrap: break-word; /* Break long words */
+  flex-grow: 1;
 }
 
 .history-info span {
   font-size: 0.85rem;
   color: var(--light-text-color);
+  margin-top: auto; /* Push to the bottom */
 }
 
 .history-delete-button {
