@@ -68,7 +68,8 @@ function App() {
       // 진단 기록에 추가 및 로컬 스토리지에 저장
       const newHistoryItem = { 
         image, 
-        diagnosis: newDiagnosis.split('\n')[0], // 요약만 저장
+        diagnosis: newDiagnosis.split('
+')[0], // 요약만 저장
         date: new Date().toLocaleString()
       };
       const updatedHistory = [newHistoryItem, ...history];
@@ -81,6 +82,18 @@ function App() {
       setLoading(false);
     }
   };
+
+  if (!apiKey) {
+    return (
+      <div className="container">
+        <div className="api-key-missing">
+          <h1>OpenAI API 키가 필요합니다</h1>
+          <p>애플리케이션을 사용하려면 Cloudflare Pages 환경 변수에 <code>VITE_OPENAI_API_KEY</code>를 설정해야 합니다.</p>
+          <p>API 키를 설정한 후 페이지를 새로고침해주세요.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -156,7 +169,7 @@ function App() {
                     <span>{item.date}</span>
                   </div>
                 </li>
-              ))}"
+              ))}
             </ul>
           </div>
         )}
