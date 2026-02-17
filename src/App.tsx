@@ -328,7 +328,7 @@ function App() {
                         <span>{item.date}</span>
                     </div>
                     <button className="history-delete-button" onClick={(e) => handleDeleteHistoryItem(e, item.id)}>
-                        &times;
+                        삭제
                     </button>
                   </div>
                 </li>
@@ -341,7 +341,7 @@ function App() {
       {selectedHistoryItem && (
         <div className="modal-backdrop" onClick={() => setSelectedHistoryItem(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-button" onClick={() => setSelectedHistoryItem(null)}>&times;</button>
+            <button className="modal-close-button" onClick={() => setSelectedHistoryItem(null)}>닫기</button>
             {selectedHistoryItem.image ? (
                 <img src={selectedHistoryItem.image} alt="진단 이미지" className="modal-image" />
             ) : (
