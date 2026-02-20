@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import OpenAI from 'openai';
 import { auth, db } from './firebase'; // Firebase auth and db import
-import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import { doc, getDoc, setDoc, increment } from 'firebase/firestore';
 import './App.css';
 
@@ -249,7 +250,7 @@ function App() {
           { role: "user", content: [
               { type: "text", text: `이 작물 사진을 보고, 어떤 질병이나 해충 문제가 있는지 진단해줘. 만약 병해충이 확인되면, 어떤 유기농 및 화학적 방제법이 있는지 자세히 알려주고, 예상되는 원인도 함께 설명해줘. 만약 특별한 문제가 없다면, 작물의 상태가 양호하다고 알려줘.` },
               { type: "image_url", image_url: { "url": image } },
-          ]},
+          ]},\
         ],
       });
 
@@ -443,7 +444,7 @@ function App() {
                     <button className="history-delete-button" onClick={(e) => handleDeleteHistoryItem(e, item.id)}>&times;</button>
                   </div>
                 </li>
-              ))}
+              ))}\
             </ul>
           </div>
         )}
