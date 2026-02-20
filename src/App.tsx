@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import OpenAI from 'openai';
 import { auth, db } from './firebase'; // Firebase auth and db import
-import { GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { doc, getDoc, setDoc, increment } from 'firebase/firestore';
 import './App.css';
@@ -145,20 +145,6 @@ function App() {
   }, [updateUserState]);
 
   useEffect(() => {
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-            console.log("Login redirect successful for user:", result.user.displayName);
-        }
-      } catch (error) {
-        console.error("Google login redirect error:", error);
-      }
-    };
-    handleRedirectResult();
-  }, []); 
-
-  useEffect(() => {
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
@@ -192,9 +178,19 @@ function App() {
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithRedirect(auth, provider);
-    } catch (error) {
-      console.error("Google login initiation error:", error);
+      const result = await signInWithPopup(auth, provider);
+      // 로그인 성공 시 사용자는 onAuthStateChanged 리스너에 의해 자동으로 처리됩니다.
+      console.log("Login popup successful for user:", result.user.displayName);
+    } catch (error: any) {
+      console.error("Google login popup error:", error);
+      // 사용자에게 좀 더 친절한 오류 메시지를 보여줄 수 있습니다.
+      if (error.code === 'auth/popup-closed-by-user') {
+        alert('로그인 팝업창을 닫았습니다. 로그인을 다시 시도해주세요.');
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        // 무시해도 되는 오류 (두 번 클릭 등)
+      } else {
+        alert(`로그인 중 오류가 발생했습니다: ${error.message}`);
+      }
     }
   };
 
