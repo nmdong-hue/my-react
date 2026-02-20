@@ -1,45 +1,57 @@
-# Project Blueprint: AI Crop Disease Diagnosis
 
-## 1. Overview
+# Blueprint: AI 농업 전문가
 
-This document outlines the plan for creating a web application that allows users to upload an image of a crop and receive an AI-powered diagnosis for potential diseases or pests.
+## 1. 개요
 
-## 2. Core Features
+작물 사진을 업로드하여 AI를 통해 병해충을 진단하고 해결책을 제안받는 웹 애플리케이션입니다. 사용자는 간편하게 사진을 올리고, AI의 분석 결과를 확인할 수 있으며, 진단 기록을 관리할 수 있습니다.
 
-*   **Image Upload:** Users can select and upload an image file (e.g., JPG, PNG) of a crop from their device.
-*   **Drag and Drop:** Users can drag and drop an image file to upload.
-*   **AI-Powered Diagnosis:** The uploaded image is processed by a simulated AI model to identify potential diseases or pests.
-*   **Detailed Result Display:** The diagnosis results are presented to the user in a clear and understandable format, including:
-    *   Diagnosed disease/pest name
-    *   Confidence level of the diagnosis
-    *   Recommended actions
-    *   Additional notes and references
-*   **Diagnosis History:** The application will display a list of recent diagnoses.
+## 2. 기존 기능 (초기 버전)
 
-## 3. Design and Styling
+*   **AI 진단:** OpenAI GPT-4o 모델을 사용하여 이미지 기반 작물 진단 기능 제공.
+*   **이미지 업로드:** 사용자가 로컬 기기에서 작물 사진을 업로드 (드래그 앤 드롭 지원).
+*   **결과 표시:** AI가 분석한 진단 결과를 텍스트 형식으로 표시.
+*   **진단 기록:** 최근 진단 내역을 로컬 저장소에 저장하고 목록으로 표시.
+*   **상세 보기:** 진단 기록 클릭 시 상세 내용을 모달 창으로 확인.
+*   **테마 변경:** 라이트/다크 모드 전환 기능.
 
-*   **Layout:** A clean and intuitive single-page interface with a clear call-to-action for uploading an image.
-*   **Styling:** Modern and visually appealing design using CSS, with a focus on user experience. The design will be mobile-responsive.
-*   **Components:**
-    *   Header with the application title.
-    *   An image upload section with a file input and a "Diagnose" button.
-    *   A results section to display the detailed diagnosis.
-    *   A diagnosis history section.
+---
 
-## 4. Technical Plan
+## 3. 신규 기능 추가 계획: 사용자 인증, 결제 연동 및 사용량 제한
 
-*   **Framework:** React with Vite.
-*   **Language:** TypeScript.
-*   **Styling:** CSS for custom styling.
-*   **AI Model:** Initially, a mock function will simulate the AI diagnosis with detailed results. This can be replaced with a real AI model in the future.
+### 3.1. 목표
 
-## 5. Development Steps
+사용자 인증 기능을 도입하여 개인화된 경험을 제공하고, Polar.sh를 통해 프로젝트 후원 모델을 구축합니다. 또한, 사용자 유형(비로그인, 로그인/결제)에 따라 서비스 사용량을 제한하여 지속 가능한 운영 기반을 마련합니다.
 
-1.  **Create the basic UI structure:** Set up the main components for the header, image upload, and results display.
-2.  **Implement the image upload functionality:** Allow users to select and preview an image.
-3.  **Implement Drag and Drop:** Add event handlers for drag and drop functionality.
-4.  **Create a mock diagnosis function:** Simulate the AI analysis and return detailed sample results (disease name, confidence, actions, notes).
-5.  **Implement Diagnosis History:** Store and display a list of recent detailed diagnoses.
-6.  **Connect the UI to the diagnosis logic:** Trigger the diagnosis on button click and display the detailed results.
-7.  **Apply styling:** Enhance the visual appearance of the application, including the new detailed results view.
-8.  **Refine and test:** Ensure the application is user-friendly and handles potential errors gracefully.
+### 3.2. 세부 실행 계획
+
+#### A. Firebase를 이용한 Google 로그인 기능 구현
+
+*   **(완료)** `firebase` 패키지 설치 및 Firebase 프로젝트 설정.
+*   **(완료)** 로그인/로그아웃 UI 및 인증 로직 구현.
+
+#### B. Polar.sh 결제 버튼 연동
+
+*   **(완료)** `index.html`에 Polar.sh 스크립트 추가.
+*   **(완료)** 헤더에 Polar.sh 후원 페이지로 연결되는 버튼 추가.
+
+#### C. 사용량 제한 기능 구현
+
+1.  **Firestore 데이터베이스 연동:**
+    *   로그인 사용자의 진단 횟수를 영구적으로 추적하기 위해 Firestore를 사용합니다.
+    *   `src/firebase.ts` 파일에 Firestore 인스턴스를 초기화하는 코드를 추가합니다.
+
+2.  **사용량 추적 로직 구현 (`src/App.tsx`):**
+    *   **비로그인 사용자:**
+        *   `localStorage`를 사용하여 진단 횟수를 기록합니다.
+        *   최대 3회까지 진단 가능하며, 횟수 소진 시 로그인을 유도하는 메시지를 표시합니다.
+    *   **로그인 사용자 (결제 시뮬레이션):**
+        *   사용자가 로그인하면 Firestore `users` 컬렉션에서 해당 유저의 정보를 확인합니다.
+        *   최초 로그인 시, 해당 유저의 문서(document)를 생성하고 `diagnosisCount`를 0, `diagnosisLimit`를 20으로 초기화합니다.
+        *   진단 요청 시 Firestore에 저장된 `diagnosisCount`가 `diagnosisLimit` 미만일 때만 기능을 허용하고, 성공 시 횟수를 1 증가시킵니다.
+        *   횟수 소진 시 추가 결제나 플랜 업그레이드를 안내하는 메시지를 표시합니다.
+
+3.  **UI 업데이트:**
+    *   사용자가 남은 진단 횟수를 명확히 인지할 수 있도록 헤더나 진단 버튼 영역에 횟수를 표시합니다. (예: "남은 횟수: 2/3" 또는 "18/20회 남음")
+
+**참고:** 현재 버전에서는 별도의 결제 시스템 연동 없이 '로그인한 모든 사용자'를 '결제 사용자'로 간주하여 20회의 진단 횟수를 부여합니다. 실제 프로덕션 환경에서는 Polar.sh 웹훅(Webhook)을 수신하는 백엔드(예: Firebase Functions)를 구축하여, 실제 결제가 완료된 사용자에 한해 `diagnosisLimit`를 상향 조정하는 로직이 필요합니다.
+

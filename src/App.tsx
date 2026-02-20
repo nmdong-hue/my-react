@@ -1,6 +1,9 @@
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import OpenAI from 'openai';
+import { auth, db } from './firebase'; // Firebase auth and db import
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, setDoc, increment } from 'firebase/firestore';
 import './App.css';
 
 const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
@@ -20,9 +23,23 @@ type HistoryItem = {
   date: string;
 };
 
+// Type guard to check if an object is a valid HistoryItem
+function isHistoryItem(item: unknown): item is Omit<HistoryItem, 'id'> & { id?: number } {
+    const obj = item as HistoryItem;
+    return (
+        typeof obj === 'object' &&
+        obj !== null &&
+        (obj.image === null || typeof obj.image === 'string') &&
+        typeof obj.diagnosis === 'string' &&
+        typeof obj.date === 'string'
+    );
+}
+
+// Constants for diagnosis limits
+const GUEST_DIAGNOSIS_LIMIT = 5;
+const USER_DIAGNOSIS_LIMIT = 20; // 로그인 사용자 기본 횟수
 const MAX_HISTORY_ITEMS = 20;
 
-// Helper function to resize an image
 const resizeImage = (file: File, maxWidth: number): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -82,10 +99,49 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null);
-  const [theme, setTheme] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme || 'light';
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [diagnosisCount, setDiagnosisCount] = useState(0);
+  const [diagnosisLimit, setDiagnosisLimit] = useState(GUEST_DIAGNOSIS_LIMIT);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+
+  const updateUserState = useCallback(async (currentUser: User | null) => {
+    if (currentUser) {
+      const userRef = doc(db, "users", currentUser.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        setDiagnosisCount(userData.diagnosisCount || 0);
+        if (userData.hasPaid) {
+          setDiagnosisLimit(Infinity);
+        } else {
+          setDiagnosisLimit(userData.diagnosisLimit || USER_DIAGNOSIS_LIMIT);
+        }
+      } else {
+        await setDoc(userRef, {
+          email: currentUser.email,
+          displayName: currentUser.displayName,
+          diagnosisCount: 0,
+          diagnosisLimit: USER_DIAGNOSIS_LIMIT,
+          hasPaid: false, // 결제 상태 필드 추가
+          createdAt: new Date(),
+        });
+        setDiagnosisCount(0);
+        setDiagnosisLimit(USER_DIAGNOSIS_LIMIT);
+      }
+    } else {
+      const guestCount = parseInt(localStorage.getItem('guestDiagnosisCount') || '0', 10);
+      setDiagnosisCount(guestCount);
+      setDiagnosisLimit(GUEST_DIAGNOSIS_LIMIT);
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      updateUserState(currentUser);
+    });
+    return () => unsubscribe();
+  }, [updateUserState]);
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
@@ -96,11 +152,13 @@ function App() {
     const savedHistory = localStorage.getItem('diagnosisHistory');
     if (savedHistory) {
       try {
-        const parsedHistory = JSON.parse(savedHistory).map((item: any, index: number) => ({
-          ...item,
-          id: item.id || Date.now() + index,
-        }));
-        setHistory(parsedHistory.slice(0, MAX_HISTORY_ITEMS));
+        const parsed = JSON.parse(savedHistory);
+        if(Array.isArray(parsed)) {
+            const parsedHistory = parsed
+                .filter(isHistoryItem)
+                .map((item, index) => ({ ...item, id: item.id || Date.now() + index }));
+            setHistory(parsedHistory.slice(0, MAX_HISTORY_ITEMS));
+        }
       } catch (e) {
         console.error("Error parsing history, clearing it.", e);
         localStorage.removeItem('diagnosisHistory');
@@ -116,18 +174,33 @@ function App() {
     return <ApiKeyMissing />;
   }
 
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Google login error:", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
   const processFile = async (file: File) => {
     if (file && file.type.startsWith('image/')) {
         try {
             const resizedImage = await resizeImage(file, 400);
             setImage(resizedImage);
-            setDiagnosis(''); // Clear previous diagnosis
+            setDiagnosis(''); 
         } catch (error) {
             console.error("Image resizing failed:", error);
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setImage(reader.result as string);
-            };
+            reader.onloadend = () => { setImage(reader.result as string); };
             reader.readAsDataURL(file);
         }
     }
@@ -136,9 +209,7 @@ function App() {
   const handleReset = () => {
     setImage(null);
     setDiagnosis('');
-    if(fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if(fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,23 +217,9 @@ function App() {
     if (file) processFile(file);
   };
 
-  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); };
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); };
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.stopPropagation(); };
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -174,6 +231,14 @@ function App() {
   const handleDiagnose = async () => {
     if (!image || !openai) return;
 
+    if (diagnosisCount >= diagnosisLimit) {
+        const message = user
+            ? "모든 진단 횟수를 소진했습니다. 추가 횟수를 원하시면 후원해주세요."
+            : `무료 진단 횟수 ${GUEST_DIAGNOSIS_LIMIT}회를 모두 사용했습니다. 더 많은 기능을 이용하려면 로그인해주세요.`;
+        alert(message);
+        return;
+    }
+
     setLoading(true);
     setDiagnosis('');
 
@@ -181,34 +246,36 @@ function App() {
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
-          {
-            role: "user",
-            content: [
+          { role: "user", content: [
               { type: "text", text: `이 작물 사진을 보고, 어떤 질병이나 해충 문제가 있는지 진단해줘. 만약 병해충이 확인되면, 어떤 유기농 및 화학적 방제법이 있는지 자세히 알려주고, 예상되는 원인도 함께 설명해줘. 만약 특별한 문제가 없다면, 작물의 상태가 양호하다고 알려줘.` },
               { type: "image_url", image_url: { "url": image } },
-            ],
-          },
+          ]},
         ],
       });
 
       const newDiagnosis = response.choices[0].message.content || '진단 결과를 받아올 수 없습니다.';
       setDiagnosis(newDiagnosis);
 
-      const newHistoryItem: HistoryItem = { 
-        id: Date.now(),
-        image, 
-        diagnosis: newDiagnosis,
-        date: new Date().toLocaleString()
-      };
-      
+      if (user && diagnosisLimit !== Infinity) { // 유료 사용자는 횟수 증가 안함
+        const userRef = doc(db, "users", user.uid);
+        await setDoc(userRef, { diagnosisCount: increment(1) }, { merge: true });
+        setDiagnosisCount(prev => prev + 1);
+      } else if (!user) {
+        localStorage.setItem('guestDiagnosisCount', (diagnosisCount + 1).toString());
+        setDiagnosisCount(prev => prev + 1);
+      }
+
+      const newHistoryItem: HistoryItem = { id: Date.now(), image, diagnosis: newDiagnosis, date: new Date().toLocaleString() };
       const updatedHistory = [newHistoryItem, ...history].slice(0, MAX_HISTORY_ITEMS);
       setHistory(updatedHistory);
-      
       saveHistoryToLocalStorage(updatedHistory);
 
-    } catch (error: any) {
-      const errorMessage = error.message || '알 수 없는 오류가 발생했습니다.';
-      setDiagnosis(`오류가 발생했습니다: ${errorMessage}`);
+    } catch (error) {
+        let errorMessage = '알 수 없는 오류가 발생했습니다.';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+        setDiagnosis(`오류가 발생했습니다: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -226,17 +293,57 @@ function App() {
     }
   };
 
+  // 임시 결제 시뮬레이션 함수
+  const handleSimulatePayment = async () => {
+    if (!user) return;
+    const userRef = doc(db, "users", user.uid);
+    try {
+        await setDoc(userRef, { hasPaid: true, diagnosisLimit: Infinity }, { merge: true });
+        await updateUserState(user); // 상태를 즉시 업데이트
+        alert("결제가 완료되었습니다! 이제 무제한으로 진단할 수 있습니다.");
+    } catch (error) {
+        console.error("Payment simulation failed:", error);
+        alert("결제 처리 중 오류가 발생했습니다.");
+    }
+  };
+
+  const isLimitReached = diagnosisCount >= diagnosisLimit;
+
   return (
     <>
       <header className="hero-section">
-         <div className="theme-toggle-container">
-          <button onClick={toggleTheme} className="theme-toggle-button">
-            {theme === 'light' ? '다크 모드' : '라이트 모드'}
-          </button>
+        <div className="header-controls">
+            <div className="theme-toggle-container">
+                <button onClick={toggleTheme} className="theme-toggle-button">
+                {theme === 'light' ? '다크 모드' : '라이트 모드'}
+                </button>
+            </div>
+            <div className="auth-controls">
+                {user ? (
+                <div className="user-info">
+                    <img src={user.photoURL || ''} alt={user.displayName || 'User'} className="user-avatar" />
+                    <span>{user.displayName}</span>
+                    <button onClick={handleLogout} className="auth-button">로그아웃</button>
+                </div>
+                ) : (
+                <button onClick={handleGoogleLogin} className="auth-button">Google 계정으로 로그인</button>
+                )}
+                <a href="https://polar.sh/nmdong-hue" className="polar-button" data-polar-button-after="Sponsor">
+                    <img src="https://polar.sh/embed/avatars/nmdong-hue.svg" alt="nmdong-hue Polar profile"/>
+                </a>
+            </div>
         </div>
         <div className="container">
-          <h1>AI 농업 전문가</h1>
-          <p>작물 사진을 업로드하여 간편하게 병해충을 진단하고 해결책을 찾아보세요.</p>
+            <h1>AI 농업 전문가</h1>
+            <p>작물 사진을 업로드하여 간편하게 병해충을 진단하고 해결책을 찾아보세요.</p>
+            <div className="usage-info">
+                남은 진단 횟수: {diagnosisLimit === Infinity ? '무제한' : `${Math.max(0, diagnosisLimit - diagnosisCount)} / ${diagnosisLimit}`}
+                {user && diagnosisLimit !== Infinity && (
+                    <button onClick={handleSimulatePayment} className="simulate-payment-button">
+                        결제하여 무제한 이용하기 (시뮬레이션)
+                    </button>
+                )}
+            </div>
         </div>
       </header>
 
@@ -246,12 +353,15 @@ function App() {
             <h2>1. 사진 업로드</h2>
             <div 
               className={`image-placeholder ${isDragging ? 'dragging' : ''}`}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => !isLimitReached && fileInputRef.current?.click()}
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
-              style={{ backgroundImage: image ? `url(${image})` : 'none' }}
+              style={{ 
+                  backgroundImage: image ? `url(${image})` : 'none',
+                  cursor: isLimitReached ? 'not-allowed' : 'pointer'
+              }}
             >
               {!image && (
                 <div className="placeholder-content">
@@ -266,33 +376,36 @@ function App() {
               onChange={handleImageUpload}
               ref={fileInputRef}
               style={{ display: 'none' }}
+              disabled={isLimitReached}
             />
             <div className="upload-actions">
-                <button onClick={handleDiagnose} disabled={!image || loading} className="action-button">
+                <button onClick={handleDiagnose} disabled={!image || loading || isLimitReached} className="action-button">
                 {loading ? (
-                    <>
-                    <div className="spinner"></div>
-                    <span>진단 중...</span>
-                    </>
+                    <><div className="spinner"></div><span>진단 중...</span></>
+                ) : isLimitReached ? (
+                    '횟수 소진'
                 ) : (
                     '진단하기'
                 )}
                 </button>
                 {image && !loading && (
-                    <button onClick={handleReset} className="clear-button">
-                        초기화
-                    </button>
+                    <button onClick={handleReset} className="clear-button">초기화</button>
                 )}
             </div>
+            {isLimitReached && (
+                <div className="limit-message">
+                    {user
+                        ? "모든 진단 횟수를 소진했습니다. 결제를 통해 무제한으로 이용해 보세요!"
+                        : `무료 진단 횟수 ${GUEST_DIAGNOSIS_LIMIT}회를 모두 사용했습니다. 로그인하고 더 많은 혜택을 받으세요!`}
+                </div>
+            )}
           </div>
 
           <div className="content-card results-section">
             <div className="card-header">
                 <h2>2. 진단 결과</h2>
                 {(diagnosis || loading) && (
-                    <button onClick={handleReset} className="reset-button-header">
-                        초기화
-                    </button>
+                    <button onClick={handleReset} className="reset-button-header">초기화</button>
                 )}
             </div>
             {(loading || diagnosis) ? (
@@ -327,9 +440,7 @@ function App() {
                         <p>{item.diagnosis.substring(0, 80)}...</p>
                         <span>{item.date}</span>
                     </div>
-                    <button className="history-delete-button" onClick={(e) => handleDeleteHistoryItem(e, item.id)}>
-                        &times;
-                    </button>
+                    <button className="history-delete-button" onClick={(e) => handleDeleteHistoryItem(e, item.id)}>&times;</button>
                   </div>
                 </li>
               ))}
