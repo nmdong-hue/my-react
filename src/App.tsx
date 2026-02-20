@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import OpenAI from 'openai';
 import { auth, db } from './firebase'; // Firebase auth and db import
-import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { doc, getDoc, setDoc, increment } from 'firebase/firestore';
 import './App.css';
@@ -145,6 +145,20 @@ function App() {
   }, [updateUserState]);
 
   useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+            console.log("Login redirect successful for user:", result.user.displayName);
+        }
+      } catch (error) {
+        console.error("Google login redirect error:", error);
+      }
+    };
+    handleRedirectResult();
+  }, []); 
+
+  useEffect(() => {
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
@@ -178,9 +192,9 @@ function App() {
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (error) {
-      console.error("Google login error:", error);
+      console.error("Google login initiation error:", error);
     }
   };
 
